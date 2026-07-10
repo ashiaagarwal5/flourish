@@ -1,5 +1,5 @@
 # Flourish
-
+Ashia Agarwal, Harini Champooranam, Keerthana Thatikonda, Nidhi Kunta, Grace Trinh
 **Females investing in females.** Your first money moves companion.
 
 Built for Fidelity's "Smart Money Moves" challenge at FidHacks 2026: helping early career women build smart money habits, connect finances to career growth, build community, and feel confident making their first money moves.
