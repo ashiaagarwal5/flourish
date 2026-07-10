@@ -1621,12 +1621,6 @@ export default function FlourishApp() {
     setInterests(prev => {
       if (prev.some(i => i.t === item.t)) return prev;
       const next = [...prev, item];
-      // Persist to the Java backend's data store (fire-and-forget)
-      fetch(`${API_BASE}/api/client/maya/interests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interests: next.map(i => i.t) }),
-      }).catch(() => {});
       return next;
     });
     setPopup(item);
