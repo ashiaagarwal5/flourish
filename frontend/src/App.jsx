@@ -139,7 +139,8 @@ const SEED_POSTS = [
    Anthropic API key server-side and proxies to the Anthropic API.
    Set VITE_API_BASE if the backend runs somewhere other than :8080. */
 async function askClaude(system, messages) {
-  const res = await fetch("/api/chat", {
+  const apiBase = import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || (import.meta.env.DEV ? "http://127.0.0.1:3000" : "");
+  const res = await fetch(`${apiBase}/api/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
