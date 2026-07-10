@@ -1,52 +1,69 @@
 # Flourish
-Ashia Agarwal, Harini Champooranam, Keerthana Thatikonda, Nidhi Kunta, Grace Trinh
 
-**Females investing in females.**
+**Females investing in females.** Your first money moves companion.
 
-A concept built for Fidelity's "Smart Money Moves" hackathon challenge: helping early career women build smart money habits, connect finances to career growth, build community, and feel confident making their first money moves.
+Built for Fidelity's "Smart Money Moves" challenge at FidHacks 2026: helping early career women build smart money habits, connect finances to career growth, build community, and feel confident making their first money moves.
 
-## What it does
+## Architecture
 
-Flourish reframes a first job's tangle of decisions, first investments, first raises, first "should I care about this headline" moments, into one calm, plain English home base.
+```
+flourish/
+  frontend/   React 18 + Vite + Tailwind single-page app
+  backend/    Zero-dependency Java 21 HTTP server (runs with `java Server.java`)
+  data/       Mock client data store (JSON) read and written by the backend
+```
 
-- **Home**: your linked portfolio, decoded. A daily return explained in plain English, a "your stocks are close friends" correlation insight, an earning power card that treats your salary as your biggest asset, and a collapsible data section (charts, correlation matrix, forecast) so the page never feels overwhelming.
-- **Translate**: paste any financial headline and get it rewritten at your level, "explain like I'm 18" through "I'm building wealth."
-- **Discover**: a "women invest in women" hub, women led companies, women CEOs, and gender lens funds, each fit checked against your actual portfolio.
-- **Coach**: a chat coach with three modes, live chat, a browsable knowledge base (what the coach is grounded in), and Quick Prep, a pocket cheat sheet generator for a money conversation you have coming up in five minutes.
-- **After Dark**: the whole app shifts tone and palette at night, plus a "Find your light" anonymous community panel for the questions people don't ask in daylight.
+- The **frontend** renders the product: portfolio hub, Discover, the AI news
+  translator, and the coach with After Dark mode.
+- The **backend** does three jobs: proxies chat requests to the Anthropic API
+  (so the key never reaches the browser), serves mock client account data from
+  `/data`, and persists saved interests back into `/data`.
+- The **data** folder stands in for a production database. Client data is
+  hardcoded JSON for the demo; the backend reads and writes it like a store.
 
-## Tech stack
+## Running it
 
-- **React 18 + Vite** for the app shell and build tooling.
-- **Tailwind CSS** for styling.
-- **JavaScript XML** for backend.
-- **Recharts** for the portfolio forecast and history charts.
-- **lucide-react** for icons.
-- **Claude (Anthropic API, `claude-sonnet-4-6`)** powers every live AI surface: the News Translator, the Discover briefings, the Coach chat, and Quick Prep. Calls are made directly from the client for this prototype.
-- **RAG pipeline**: the Coach's "Knowledge base" tab and the "How Flourish thinks" panel (account menu) document the retrieval, personalization, generation, and guardrail layers the design is built around. Generation is live in this build; the retrieval layer is represented with a curated, mocked knowledge base for the demo rather than a deployed vector database.
-
-## Running it locally
+Backend (needs Java 11+, no build tools required):
 
 ```bash
+cd backend
+cp .env.example .env      # add your Anthropic API key
+java Server.java
+```
+
+Frontend (in a second terminal):
+
+```bash
+cd frontend
 npm install
-cp .env.example .env
-# add your own Anthropic API key to .env
 npm run dev
 ```
 
-Open the printed local URL. The app works fully without an API key too, every AI feature falls back to a static demo response if `VITE_ANTHROPIC_API_KEY` isn't set.
+Open the printed URL. Every AI feature works live through the backend; if the
+backend is offline or has no key, the app still runs and AI features fall back
+to static demo responses.
 
-To build for production:
+## AI + RAG
 
-```bash
-npm run build
-npm run preview
-```
+Claude (claude-sonnet-4-6) powers the news translator, discover briefings,
+coach chat, portfolio health reads, and Quick Prep. Prompts are grounded in a
+curated knowledge base (see `data/knowledge-base.json` and
+`GET /api/knowledge`) and personalized with the client profile, holdings, and
+saved interests. Guardrails keep every answer educational: no buy or sell
+recommendations. In this prototype, generation is live and retrieval is
+represented by the curated corpus rather than a deployed vector store.
+
+## API
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| GET  | /api/health | liveness check |
+| POST | /api/chat | Anthropic proxy (key stays server-side) |
+| GET  | /api/client/{id} | mock client account data |
+| POST | /api/client/{id}/interests | persist saved interests |
+| GET  | /api/knowledge | coach knowledge base |
 
 ## Notes for judges
 
-This is a hackathon prototype. Portfolio holdings, correlation figures, and community posts are sample data for demo purposes, not a real linked account. Nothing in the app is investment advice, every AI surface is scoped to education and scenario exploration.
-
-## Team
-
-Built for Fidelity's Smart Money Moves hackathon challenge.
+24-hour hackathon prototype. Holdings, correlations, and community posts are
+sample data, not real accounts. Nothing here is investment advice.

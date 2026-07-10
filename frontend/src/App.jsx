@@ -134,25 +134,16 @@ const SEED_POSTS = [
 /* ------------------------------------------------------------------ */
 /*  AI + RAG LAYER (retrieval mocked for demo; pipeline shown in UI)   */
 /* ------------------------------------------------------------------ */
-/* AI + RAG LAYER (retrieval mocked for demo; pipeline shown in UI)
-   NOTE: this calls the Anthropic API directly from the browser using a
-   Vite env var. That is fine for a hackathon demo but is not a pattern
-   to ship to production, since it exposes your API key to anyone who
-   opens devtools. For a real product, proxy this through a backend. */
-const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+/* AI + RAG LAYER
+   Chat requests go to the Flourish Java backend, which holds the
+   Anthropic API key server-side and proxies to the Anthropic API.
+   Set VITE_API_BASE if the backend runs somewhere other than :8080. */
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080";
 
 async function askClaude(system, messages) {
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error("Missing VITE_ANTHROPIC_API_KEY, add it to a .env file to enable live AI responses.");
-  }
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system, messages }),
   });
   const data = await res.json();
@@ -407,6 +398,7 @@ function Onboarding({ onDone }) {
 /* ------------------------------------------------------------------ */
 function Home({ theme, profile, dark, earn, conf, connected, onConnect, interests, removeInterest, askCoach, goDiscover, goTranslate, focus, onFocusHandled }) {
   const [linking, setLinking] = useState(false);
+  const [holdings, setHoldings] = useState(HOLDINGS);
   const [whatsReturn, setWhatsReturn] = useState(false);
   const [openInsight, setOpenInsight] = useState(null);
   const [dataOpen, setDataOpen] = useState(false);
@@ -432,6 +424,12 @@ function Home({ theme, profile, dark, earn, conf, connected, onConnect, interest
 
   const link = () => {
     setLinking(true);
+    // Pull the client's data from the Java backend (mock Fidelity account);
+    // fall back silently to the built-in sample if the backend is offline.
+    fetch(`${API_BASE}/api/client/maya`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && d.holdings) setHoldings(d.holdings); })
+      .catch(() => {});
     setTimeout(() => { setLinking(false); onConnect(); earn("portfolio", 10, "Linked your Fidelity account"); }, 1400);
   };
 
@@ -621,7 +619,7 @@ In under 130 words of plain text with **bold** mini-labels: give a friendly heal
             )}
           </div>
           <div className="flex-1" style={{ minWidth: 220, maxWidth: 380 }}>
-            {HOLDINGS.map(h => (
+            {holdings.map(h => (
               <div key={h.t} className="flex items-center gap-2 py-0.5">
                 <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 12, color: theme.ink, width: 44 }}>{h.t}</span>
                 <div className="h-1.5 flex-1 rounded-full" style={{ background: theme.chip }}>
@@ -1607,7 +1605,17 @@ export default function FlourishApp() {
 
   const askCoach = (q) => { setCoachSeed(q); setScreen("coach"); };
   const addInterest = (item) => {
-    setInterests(prev => prev.some(i => i.t === item.t) ? prev : [...prev, item]);
+    setInterests(prev => {
+      if (prev.some(i => i.t === item.t)) return prev;
+      const next = [...prev, item];
+      // Persist to the Java backend's data store (fire-and-forget)
+      fetch(`${API_BASE}/api/client/maya/interests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interests: next.map(i => i.t) }),
+      }).catch(() => {});
+      return next;
+    });
     setPopup(item);
   };
 
