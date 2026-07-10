@@ -1,6 +1,4 @@
-# Flourish | FidHacks
-
-By Nidhi Kunta, Ashia Agarwal, Keerthana Thatikonda, Grace Trinh, Harini Champooranan
+# Flourish
 
 **Females investing in females.** Your first money moves companion.
 

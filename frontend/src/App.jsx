@@ -138,31 +138,17 @@ const SEED_POSTS = [
    Chat requests go to the Flourish Java backend, which holds the
    Anthropic API key server-side and proxies to the Anthropic API.
    Set VITE_API_BASE if the backend runs somewhere other than :8080. */
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080";
+
 async function askClaude(system, messages) {
-  const apiBase = import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || (import.meta.env.DEV ? "http://127.0.0.1:3000" : "");
-  const res = await fetch(`${apiBase}/api/chat`, {
+  const res = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1000,
-      system,
-      messages
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system, messages }),
   });
-
   const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data?.error?.message || "API error");
-  }
-
-  return data.content
-    .filter(b => b.type === "text")
-    .map(b => b.text)
-    .join("\n");
+  if (data.error) throw new Error(data.error.message || "API error");
+  return data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
 }
 
 function profileLine(p) {
@@ -440,7 +426,7 @@ function Home({ theme, profile, dark, earn, conf, connected, onConnect, interest
     setLinking(true);
     // Pull the client's data from the Java backend (mock Fidelity account);
     // fall back silently to the built-in sample if the backend is offline.
-    fetch("/api/client/maya")
+    fetch(`${API_BASE}/api/client/maya`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => { if (d && d.holdings) setHoldings(d.holdings); })
       .catch(() => {});
@@ -1622,6 +1608,12 @@ export default function FlourishApp() {
     setInterests(prev => {
       if (prev.some(i => i.t === item.t)) return prev;
       const next = [...prev, item];
+      // Persist to the Java backend's data store (fire-and-forget)
+      fetch(`${API_BASE}/api/client/maya/interests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interests: next.map(i => i.t) }),
+      }).catch(() => {});
       return next;
     });
     setPopup(item);
